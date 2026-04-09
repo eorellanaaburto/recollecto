@@ -1,126 +1,117 @@
 import 'package:flutter/material.dart';
-import 'package:recollecto/features/settings/presentation/logs_page.dart';
 
-import '../../../core/localization/locale_controller.dart';
-import '../../../core/theme/theme_controller.dart';
-import '../../../l10n/generated/app_localizations.dart';
+import '../../../core/localization/local_text.dart';
+import '../../../main.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeController = ThemeController.instance;
-    final localeController = LocaleController.instance;
-    final l10n = AppLocalizations.of(context)!;
+    final appState = context.appState;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.settings),
+        title: Text(tr(context, es: 'Ajustes', en: 'Settings')),
       ),
-      body: AnimatedBuilder(
-        animation: Listenable.merge([
-          themeController,
-          localeController,
-        ]),
-        builder: (context, _) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.translate_outlined),
-                  title: Text(l10n.language),
-                  subtitle: Text(
-                      _languageLabel(context, localeController.currentCode)),
-                  trailing: DropdownButton<String>(
-                    value: localeController.currentCode,
-                    underline: const SizedBox.shrink(),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'system',
-                        child: Text(l10n.languageSystem),
-                      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr(context, es: 'Idioma', en: 'Language'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: appState.locale.languageCode,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
                       DropdownMenuItem(
                         value: 'es',
-                        child: Text(l10n.languageSpanish),
+                        child: Text('Español'),
                       ),
                       DropdownMenuItem(
                         value: 'en',
-                        child: Text(l10n.languageEnglish),
+                        child: Text('English'),
                       ),
                     ],
                     onChanged: (value) async {
                       if (value == null) return;
-
-                      if (value == 'system') {
-                        await localeController.setSystemLocale();
-                      } else {
-                        await localeController.setLocale(Locale(value));
-                      }
+                      await appState.setLocale(Locale(value));
                     },
                   ),
-                ),
+                ],
               ),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.bug_report_outlined),
-                  title: Text(l10n.viewLogs),
-                  subtitle: Text(l10n.viewLogsSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LogsPage()),
-                    );
-                  },
-                ),
-              ),
-              Card(
-                child: Column(
-                  children: [
-                    RadioListTile<ThemeMode>(
-                      value: ThemeMode.light,
-                      groupValue: themeController.themeMode,
-                      title: Text(l10n.themeLight),
-                      subtitle: Text(l10n.themeLightSubtitle),
-                      onChanged: (value) {
-                        if (value != null) {
-                          themeController.setThemeMode(value);
-                        }
-                      },
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr(context, es: 'Tema', en: 'Theme'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    RadioListTile<ThemeMode>(
-                      value: ThemeMode.dark,
-                      groupValue: themeController.themeMode,
-                      title: Text(l10n.themeDark),
-                      subtitle: Text(l10n.themeDarkSubtitle),
-                      onChanged: (value) {
-                        if (value != null) {
-                          themeController.setThemeMode(value);
-                        }
-                      },
+                  ),
+                  const SizedBox(height: 12),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.system,
+                    groupValue: appState.themeMode,
+                    onChanged: (value) async {
+                      if (value != null) {
+                        await appState.setThemeMode(value);
+                      }
+                    },
+                    title: Text(
+                      tr(context, es: 'Sistema', en: 'System'),
                     ),
-                  ],
-                ),
+                  ),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.light,
+                    groupValue: appState.themeMode,
+                    onChanged: (value) async {
+                      if (value != null) {
+                        await appState.setThemeMode(value);
+                      }
+                    },
+                    title: Text(
+                      tr(context, es: 'Claro', en: 'Light'),
+                    ),
+                  ),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.dark,
+                    groupValue: appState.themeMode,
+                    onChanged: (value) async {
+                      if (value != null) {
+                        await appState.setThemeMode(value);
+                      }
+                    },
+                    title: Text(
+                      tr(context, es: 'Oscuro', en: 'Dark'),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
-  }
-
-  String _languageLabel(BuildContext context, String code) {
-    final l10n = AppLocalizations.of(context)!;
-
-    switch (code) {
-      case 'es':
-        return l10n.languageSpanish;
-      case 'en':
-        return l10n.languageEnglish;
-      default:
-        return l10n.languageSystem;
-    }
   }
 }

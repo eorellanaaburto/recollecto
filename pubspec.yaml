@@ -28,6 +28,7 @@ dependencies:
   file_picker: ^11.0.2
   file_selector: ^1.1.0
   file_save_directory: ^1.0.4
+  local_auth: ^3.0.1
   
 dev_dependencies:
   flutter_test:

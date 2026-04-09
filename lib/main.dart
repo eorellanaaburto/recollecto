@@ -1,83 +1,84 @@
 import 'package:flutter/material.dart';
-import 'package:recollecto/features/home/presentation/homepage.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:flutter/widgets.dart';
+import 'core/app/app_state.dart';
+import 'features/splash/presentation/splash_page.dart';
+import 'l10n/generated/app_localizations.dart';
 
-import 'app.dart';
-import 'core/localization/locale_controller.dart';
-import 'core/theme/theme_controller.dart';
-
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ThemeController.instance.loadTheme();
-  await LocaleController.instance.loadLocale();
-  runApp(const RecollectoApp());
+
+  final appState = AppState();
+  await appState.load();
+
+  runApp(RecollectoApp(appState: appState));
 }
 
-class CollectorApp extends StatelessWidget {
-  const CollectorApp({super.key});
+class RecollectoApp extends StatelessWidget {
+  final AppState appState;
+
+  const RecollectoApp({
+    super.key,
+    required this.appState,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Collector App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const SplashLauncher(),
+    return AnimatedBuilder(
+      animation: appState,
+      builder: (context, _) {
+        return _AppStateScope(
+          appState: appState,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Recollecto',
+            locale: appState.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            themeMode: appState.themeMode,
+            theme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.light,
+              colorSchemeSeed: const Color(0xFF8B6F7D),
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.dark,
+              colorSchemeSeed: const Color(0xFF8B6F7D),
+            ),
+            home: const SplashPage(),
+          ),
+        );
+      },
     );
   }
 }
 
-class SplashLauncher extends StatefulWidget {
-  const SplashLauncher({super.key});
+class _AppStateScope extends InheritedWidget {
+  final AppState appState;
+
+  const _AppStateScope({
+    required this.appState,
+    required super.child,
+  });
+
+  static AppState of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<_AppStateScope>();
+    assert(scope != null, 'No AppState found in context');
+    return scope!.appState;
+  }
 
   @override
-  State<SplashLauncher> createState() => _SplashLauncherState();
+  bool updateShouldNotify(_AppStateScope oldWidget) {
+    return oldWidget.appState != appState;
+  }
 }
 
-class _SplashLauncherState extends State<SplashLauncher> {
-  @override
-  void initState() {
-    super.initState();
-    _goToHome();
-  }
-
-  Future<void> _goToHome() async {
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
-
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/images/logo.png', width: 160, height: 160),
-            const SizedBox(height: 24),
-            const Text(
-              'Collector App',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Organiza y respalda tu colección',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+extension AppStateX on BuildContext {
+  AppState get appState => _AppStateScope.of(this);
 }

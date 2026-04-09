@@ -108,16 +108,22 @@ class _BackupPageState extends State<BackupPage> {
         _progressMessage = 'Respaldo exportado a Descargas';
       });
 
-      _showMessage(tr(
-        context,
-        es: 'Respaldo creado y guardado en Descargas: ${created.name}',
-        en: 'Backup created and saved to Downloads: ${created.name}',
-      ));
+      _showMessage(
+        tr(
+          context,
+          es: 'Respaldo creado y guardado en Descargas: ${created.name}',
+          en: 'Backup created and saved to Downloads: ${created.name}',
+        ),
+      );
 
       await _loadBackups();
     } catch (e, st) {
-      AppLogger.instance
-          .error('BackupPage', 'Error creando respaldo local', e, st);
+      AppLogger.instance.error(
+        'BackupPage',
+        'Error creando respaldo local',
+        e,
+        st,
+      );
 
       if (!mounted) return;
 
@@ -244,6 +250,37 @@ class _BackupPageState extends State<BackupPage> {
     }
   }
 
+  Future<void> _restoreFromServer() async {
+    setState(() {
+      _isWorking = true;
+      _progress = 0.2;
+      _progressMessage = 'Restaurando desde servidor';
+    });
+
+    try {
+      final result = await _postgresRemoteService.restoreServerSqlToLocal();
+
+      if (!mounted) return;
+
+      setState(() {
+        _progress = 1.0;
+        _progressMessage = 'Restauración web completada';
+      });
+
+      _showMessage(
+        'Restauración OK • users=${result.userCount} • cat=${result.categoryCount} • col=${result.collectionCount} • items=${result.itemCount} • photos=${result.photoCount}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage('Error restaurando desde servidor: $e');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isWorking = false;
+      });
+    }
+  }
+
   Future<void> _syncNow() async {
     setState(() {
       _isWorking = true;
@@ -341,8 +378,12 @@ class _BackupPageState extends State<BackupPage> {
         ),
       );
     } catch (e, st) {
-      AppLogger.instance
-          .error('BackupPage', 'Error restaurando respaldo local', e, st);
+      AppLogger.instance.error(
+        'BackupPage',
+        'Error restaurando respaldo local',
+        e,
+        st,
+      );
 
       if (!mounted) return;
 
@@ -543,11 +584,7 @@ class _BackupPageState extends State<BackupPage> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          tr(
-                            context,
-                            es: 'Respaldos ZIP',
-                            en: 'ZIP backups',
-                          ),
+                          tr(context, es: 'Respaldos ZIP', en: 'ZIP backups'),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -631,6 +668,15 @@ class _BackupPageState extends State<BackupPage> {
                   onPressed: _isWorking ? null : _writeRemoteTestRow,
                   icon: const Icon(Icons.upload_outlined),
                   label: const Text('Probar escritura remota'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isWorking ? null : _restoreFromServer,
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: const Text('Restaurar desde servidor'),
                 ),
               ),
               const SizedBox(height: 16),

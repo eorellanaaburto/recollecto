@@ -20,7 +20,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -34,10 +34,14 @@ class AppDatabase {
         if (oldVersion < 3) {
           await _ensureCollectionLogoSchema(db);
         }
+        if (oldVersion < 4) {
+          await _ensureUsersSchema(db);
+        }
       },
       onOpen: (db) async {
         await _ensureImageHashSchema(db);
         await _ensureCollectionLogoSchema(db);
+        await _ensureUsersSchema(db);
       },
     );
   }
@@ -92,6 +96,19 @@ class AppDatabase {
     ''');
 
     await db.execute('''
+      CREATE TABLE app_users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        normalized_username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        biometric_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_categories_normalized_name
       ON categories(normalized_name)
     ''');
@@ -125,6 +142,11 @@ class AppDatabase {
       CREATE INDEX IF NOT EXISTS idx_item_photos_image_hash
       ON item_photos(image_hash)
     ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_app_users_normalized_username
+      ON app_users(normalized_username)
+    ''');
   }
 
   Future<void> _ensureImageHashSchema(DatabaseExecutor db) async {
@@ -153,6 +175,26 @@ class AppDatabase {
         'ALTER TABLE collections ADD COLUMN logo_path TEXT',
       );
     }
+  }
+
+  Future<void> _ensureUsersSchema(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        normalized_username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        biometric_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_app_users_normalized_username
+      ON app_users(normalized_username)
+    ''');
   }
 
   Future<void> close() async {
