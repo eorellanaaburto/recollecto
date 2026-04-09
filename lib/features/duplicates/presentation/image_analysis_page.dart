@@ -66,8 +66,8 @@ class _ImageAnalysisPageState extends State<ImageAnalysisPage> {
                   'photoPath': e['photoPath'],
                 })
             .toList(),
-        minScore: 0.80,
-        limit: 10,
+        minScore: 0.70,
+        limit: 20,
       );
 
       if (!mounted) return;
