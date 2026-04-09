@@ -1,5 +1,4 @@
 import 'package:postgres/postgres.dart';
-import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/logging/app_logger.dart';
@@ -142,111 +141,177 @@ class PostgresRemoteService {
         await _ensureSchema(tx);
 
         for (final row in categories) {
-          await tx.execute(
-            r'''
-            INSERT INTO categories (id, name, normalized_name, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (id) DO UPDATE SET
-              name = EXCLUDED.name,
-              normalized_name = EXCLUDED.normalized_name,
-              created_at = EXCLUDED.created_at
-            ''',
-            parameters: [
-              row['id'],
-              row['name'],
-              row['normalized_name'],
-              row['created_at'],
-            ],
-          );
+          try {
+            await tx.execute(
+              r'''
+              INSERT INTO categories (
+                id,
+                name,
+                normalized_name,
+                created_at
+              )
+              VALUES ($1, $2, $3, $4)
+              ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                normalized_name = EXCLUDED.normalized_name,
+                created_at = EXCLUDED.created_at
+              ''',
+              parameters: [
+                row['id'],
+                row['name'],
+                row['normalized_name'],
+                row['created_at'],
+              ],
+            );
+          } catch (e, st) {
+            AppLogger.instance.error(
+              tag,
+              'Error insertando categoría '
+              'id=${row['id']} '
+              'name=${row['name']}',
+              e,
+              st,
+            );
+            rethrow;
+          }
         }
 
         for (final row in collections) {
-          await tx.execute(
-            r'''
-            INSERT INTO collections (id, category_id, name, normalized_name, logo_path, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            ON CONFLICT (id) DO UPDATE SET
-              category_id = EXCLUDED.category_id,
-              name = EXCLUDED.name,
-              normalized_name = EXCLUDED.normalized_name,
-              logo_path = EXCLUDED.logo_path,
-              created_at = EXCLUDED.created_at
-            ''',
-            parameters: [
-              row['id'],
-              row['category_id'],
-              row['name'],
-              row['normalized_name'],
-              row['logo_path'],
-              row['created_at'],
-            ],
-          );
+          try {
+            await tx.execute(
+              r'''
+              INSERT INTO collections (
+                id,
+                category_id,
+                name,
+                normalized_name,
+                logo_path,
+                created_at
+              )
+              VALUES ($1, $2, $3, $4, $5, $6)
+              ON CONFLICT (id) DO UPDATE SET
+                category_id = EXCLUDED.category_id,
+                name = EXCLUDED.name,
+                normalized_name = EXCLUDED.normalized_name,
+                logo_path = EXCLUDED.logo_path,
+                created_at = EXCLUDED.created_at
+              ''',
+              parameters: [
+                row['id'],
+                row['category_id'],
+                row['name'],
+                row['normalized_name'],
+                row['logo_path'],
+                row['created_at'],
+              ],
+            );
+          } catch (e, st) {
+            AppLogger.instance.error(
+              tag,
+              'Error insertando colección '
+              'id=${row['id']} '
+              'category_id=${row['category_id']} '
+              'name=${row['name']} '
+              'logo_path=${row['logo_path']}',
+              e,
+              st,
+            );
+            rethrow;
+          }
         }
 
         for (final row in items) {
-          await tx.execute(
-            r'''
-            INSERT INTO items (
-              id,
-              category_id,
-              collection_id,
-              title,
-              normalized_title,
-              description,
-              created_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (id) DO UPDATE SET
-              category_id = EXCLUDED.category_id,
-              collection_id = EXCLUDED.collection_id,
-              title = EXCLUDED.title,
-              normalized_title = EXCLUDED.normalized_title,
-              description = EXCLUDED.description,
-              created_at = EXCLUDED.created_at
-            ''',
-            parameters: [
-              row['id'],
-              row['category_id'],
-              row['collection_id'],
-              row['title'],
-              row['normalized_title'],
-              row['description'],
-              row['created_at'],
-            ],
-          );
+          try {
+            await tx.execute(
+              r'''
+              INSERT INTO items (
+                id,
+                category_id,
+                collection_id,
+                title,
+                normalized_title,
+                description,
+                created_at
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              ON CONFLICT (id) DO UPDATE SET
+                category_id = EXCLUDED.category_id,
+                collection_id = EXCLUDED.collection_id,
+                title = EXCLUDED.title,
+                normalized_title = EXCLUDED.normalized_title,
+                description = EXCLUDED.description,
+                created_at = EXCLUDED.created_at
+              ''',
+              parameters: [
+                row['id'],
+                row['category_id'],
+                row['collection_id'],
+                row['title'],
+                row['normalized_title'],
+                row['description'],
+                row['created_at'],
+              ],
+            );
+          } catch (e, st) {
+            AppLogger.instance.error(
+              tag,
+              'Error insertando item '
+              'id=${row['id']} '
+              'category_id=${row['category_id']} '
+              'collection_id=${row['collection_id']} '
+              'title=${row['title']}',
+              e,
+              st,
+            );
+            rethrow;
+          }
         }
 
         for (final row in photos) {
-          await tx.execute(
-            r'''
-            INSERT INTO item_photos (
-              id,
-              item_id,
-              file_path,
-              file_name,
-              image_hash,
-              is_primary,
-              created_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (id) DO UPDATE SET
-              item_id = EXCLUDED.item_id,
-              file_path = EXCLUDED.file_path,
-              file_name = EXCLUDED.file_name,
-              image_hash = EXCLUDED.image_hash,
-              is_primary = EXCLUDED.is_primary,
-              created_at = EXCLUDED.created_at
-            ''',
-            parameters: [
-              row['id'],
-              row['item_id'],
-              row['file_path'],
-              row['file_name'],
-              row['image_hash'],
-              row['is_primary'],
-              row['created_at'],
-            ],
-          );
+          try {
+            await tx.execute(
+              r'''
+              INSERT INTO item_photos (
+                id,
+                item_id,
+                file_path,
+                file_name,
+                image_hash,
+                is_primary,
+                created_at
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              ON CONFLICT (id) DO UPDATE SET
+                item_id = EXCLUDED.item_id,
+                file_path = EXCLUDED.file_path,
+                file_name = EXCLUDED.file_name,
+                image_hash = EXCLUDED.image_hash,
+                is_primary = EXCLUDED.is_primary,
+                created_at = EXCLUDED.created_at
+              ''',
+              parameters: [
+                row['id'],
+                row['item_id'],
+                row['file_path'],
+                row['file_name'],
+                row['image_hash'],
+                row['is_primary'],
+                row['created_at'],
+              ],
+            );
+          } catch (e, st) {
+            AppLogger.instance.error(
+              tag,
+              'Error insertando foto '
+              'id=${row['id']} '
+              'item_id=${row['item_id']} '
+              'file_name=${row['file_name']} '
+              'file_path=${row['file_path']}',
+              e,
+              st,
+            );
+            rethrow;
+          }
         }
       });
 
@@ -258,6 +323,14 @@ class PostgresRemoteService {
         itemCount: items.length,
         photoCount: photos.length,
       );
+    } catch (e, st) {
+      AppLogger.instance.error(
+        tag,
+        'Fallo el respaldo SQL completo hacia PostgreSQL',
+        e,
+        st,
+      );
+      rethrow;
     } finally {
       await conn.close();
     }
@@ -279,10 +352,11 @@ class PostgresRemoteService {
         category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         normalized_name TEXT NOT NULL,
-        logo_path TEXT,
         created_at TEXT NOT NULL
       )
     ''');
+
+    await _ensureCollectionLogoColumn(executor);
 
     await executor.execute('''
       CREATE TABLE IF NOT EXISTS items (
@@ -342,17 +416,29 @@ class PostgresRemoteService {
       CREATE INDEX IF NOT EXISTS idx_item_photos_image_hash
       ON item_photos(image_hash)
     ''');
-
-    await _ensureCollectionLogoColumn(executor);
   }
 
   Future<void> _ensureCollectionLogoColumn(dynamic executor) async {
     try {
       await executor.execute(
-        'ALTER TABLE collections ADD COLUMN logo_path TEXT',
+        'ALTER TABLE collections ADD COLUMN IF NOT EXISTS logo_path TEXT',
       );
-    } catch (_) {
-      // La columna ya existe.
+    } catch (e, st) {
+      AppLogger.instance.error(
+        'PostgresRemoteService',
+        'No se pudo asegurar la columna logo_path en collections. '
+            'Se intentará una segunda forma de ALTER TABLE.',
+        e,
+        st,
+      );
+
+      try {
+        await executor.execute(
+          'ALTER TABLE collections ADD COLUMN logo_path TEXT',
+        );
+      } catch (_) {
+        // La columna probablemente ya existe.
+      }
     }
   }
 }
