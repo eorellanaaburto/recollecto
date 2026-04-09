@@ -140,6 +140,27 @@ class _AuthGatePageState extends State<AuthGatePage> {
     }
   }
 
+  Future<void> _enterLocal() async {
+    setState(() {
+      _busy = true;
+    });
+
+    try {
+      await _authService.enterLocalMode();
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+      });
+    }
+  }
+
   void _showMessage(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text)),
@@ -149,13 +170,13 @@ class _AuthGatePageState extends State<AuthGatePage> {
   @override
   Widget build(BuildContext context) {
     final title = _createMode
-        ? tr(context, es: 'Crear usuario', en: 'Create user')
-        : tr(context, es: 'Iniciar sesión', en: 'Sign in');
+        ? tr(context, es: 'Crear usuario web', en: 'Create web user')
+        : tr(context, es: 'Iniciar sesión web', en: 'Web sign in');
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text(title),
+        title: Text(tr(context, es: 'Acceso', en: 'Access')),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -197,16 +218,24 @@ class _AuthGatePageState extends State<AuthGatePage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
                             _createMode
                                 ? tr(
                                     context,
-                                    es: 'Crea un usuario nuevo. Si ya existe en el servidor, te avisaremos.',
-                                    en: 'Create a new user. If it already exists on the server, we will warn you.',
+                                    es: 'Crea un usuario en el sistema web. Si ya existe, te avisaremos.',
+                                    en: 'Create a user in the web system. If it already exists, we will warn you.',
                                   )
                                 : tr(
                                     context,
-                                    es: 'Inicia sesión con un usuario local o remoto.',
-                                    en: 'Sign in with a local or remote user.',
+                                    es: 'Inicia sesión con un usuario del sistema web.',
+                                    en: 'Sign in with a web system user.',
                                   ),
                           ),
                           const SizedBox(height: 16),
@@ -277,8 +306,11 @@ class _AuthGatePageState extends State<AuthGatePage> {
                               label: Text(
                                 _createMode
                                     ? tr(context,
-                                        es: 'Crear usuario', en: 'Create user')
-                                    : tr(context, es: 'Entrar', en: 'Sign in'),
+                                        es: 'Crear usuario web',
+                                        en: 'Create web user')
+                                    : tr(context,
+                                        es: 'Entrar al sistema web',
+                                        en: 'Sign in to web'),
                               ),
                             ),
                           ),
@@ -299,6 +331,48 @@ class _AuthGatePageState extends State<AuthGatePage> {
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tr(context,
+                                es: 'Ingreso local', en: 'Local access'),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            tr(
+                              context,
+                              es: 'Entra de forma local, sin clave y sin usar servicios web.',
+                              en: 'Enter locally, without password and without using web services.',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _busy ? null : _enterLocal,
+                              icon: const Icon(Icons.offline_bolt_outlined),
+                              label: Text(
+                                tr(
+                                  context,
+                                  es: 'Ingresar local',
+                                  en: 'Enter locally',
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

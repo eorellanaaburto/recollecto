@@ -178,13 +178,13 @@ class _LoginPageState extends State<LoginPage> {
                             _isCreateMode
                                 ? tr(
                                     context,
-                                    es: 'Crea el usuario de la app. Si ya existe en el servidor, deberás iniciar sesión.',
-                                    en: 'Create the app user. If it already exists on the server, you will need to sign in.',
+                                    es: 'Crea el usuario local de la app.',
+                                    en: 'Create the local app user.',
                                   )
                                 : tr(
                                     context,
-                                    es: 'Ingresa con tu usuario y clave.',
-                                    en: 'Sign in with your username and password.',
+                                    es: 'Ingresa con tu usuario y clave locales.',
+                                    en: 'Sign in with your local username and password.',
                                   ),
                             style: const TextStyle(fontSize: 16),
                           ),

@@ -29,6 +29,7 @@ class AuthService {
 
   static const String _sessionKey = 'auth_is_logged_in';
   static const String _sessionUserKey = 'auth_user_id';
+  static const String _sessionModeKey = 'auth_session_mode';
   static const String _setupCompletedKey = 'auth_setup_completed';
 
   final AuthRepository _repository = AuthRepository();
@@ -59,10 +60,16 @@ class AuthService {
     return prefs.getBool(_sessionKey) ?? false;
   }
 
+  Future<bool> isLocalSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getString(_sessionModeKey) ?? '') == 'local';
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
     await prefs.remove(_sessionUserKey);
+    await prefs.remove(_sessionModeKey);
   }
 
   Future<AuthActionResult> createUser({
@@ -112,7 +119,7 @@ class AuthService {
     await _repository.insertUser(user);
     await _remoteService.upsertRemoteUser(user);
     await markSetupCompleted();
-    await _saveSession(user.id);
+    await _saveWebSession(user.id);
 
     AppLogger.instance.info(tag, 'Usuario creado: ${user.username}');
 
@@ -136,7 +143,7 @@ class AuthService {
       final expectedHash = _hashPassword(password, localUser.passwordSalt);
       if (expectedHash == localUser.passwordHash) {
         await markSetupCompleted();
-        await _saveSession(localUser.id);
+        await _saveWebSession(localUser.id);
         AppLogger.instance
             .info(tag, 'Login local correcto: ${localUser.username}');
         return const AuthActionResult(
@@ -187,7 +194,7 @@ class AuthService {
 
     await _repository.insertOrReplaceUser(importedUser);
     await markSetupCompleted();
-    await _saveSession(importedUser.id);
+    await _saveWebSession(importedUser.id);
 
     AppLogger.instance
         .info(tag, 'Login remoto correcto: ${importedUser.username}');
@@ -196,6 +203,17 @@ class AuthService {
       success: true,
       message: 'Inicio de sesión correcto.',
     );
+  }
+
+  Future<void> enterLocalMode() async {
+    const tag = 'AuthService';
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_sessionKey, true);
+    await prefs.setString(_sessionModeKey, 'local');
+    await prefs.remove(_sessionUserKey);
+
+    AppLogger.instance.info(tag, 'Ingreso local sin clave');
   }
 
   Future<bool> canUseBiometrics() async {
@@ -226,7 +244,7 @@ class AuthService {
 
       if (authenticated) {
         await markSetupCompleted();
-        await _saveSession(user.id);
+        await _saveWebSession(user.id);
         AppLogger.instance.info(tag, 'Login biométrico correcto');
       }
 
@@ -247,10 +265,11 @@ class AuthService {
     );
   }
 
-  Future<void> _saveSession(String userId) async {
+  Future<void> _saveWebSession(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_sessionKey, true);
     await prefs.setString(_sessionUserKey, userId);
+    await prefs.setString(_sessionModeKey, 'web');
   }
 
   String _generateSalt() {
