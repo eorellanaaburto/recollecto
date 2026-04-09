@@ -163,12 +163,13 @@ class PostgresRemoteService {
         for (final row in collections) {
           await tx.execute(
             r'''
-            INSERT INTO collections (id, category_id, name, normalized_name, created_at)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO collections (id, category_id, name, normalized_name, logo_path, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (id) DO UPDATE SET
               category_id = EXCLUDED.category_id,
               name = EXCLUDED.name,
               normalized_name = EXCLUDED.normalized_name,
+              logo_path = EXCLUDED.logo_path,
               created_at = EXCLUDED.created_at
             ''',
             parameters: [
@@ -176,6 +177,7 @@ class PostgresRemoteService {
               row['category_id'],
               row['name'],
               row['normalized_name'],
+              row['logo_path'],
               row['created_at'],
             ],
           );
@@ -277,6 +279,7 @@ class PostgresRemoteService {
         category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         normalized_name TEXT NOT NULL,
+        logo_path TEXT,
         created_at TEXT NOT NULL
       )
     ''');
@@ -339,5 +342,17 @@ class PostgresRemoteService {
       CREATE INDEX IF NOT EXISTS idx_item_photos_image_hash
       ON item_photos(image_hash)
     ''');
+
+    await _ensureCollectionLogoColumn(executor);
+  }
+
+  Future<void> _ensureCollectionLogoColumn(dynamic executor) async {
+    try {
+      await executor.execute(
+        'ALTER TABLE collections ADD COLUMN logo_path TEXT',
+      );
+    } catch (_) {
+      // La columna ya existe.
+    }
   }
 }

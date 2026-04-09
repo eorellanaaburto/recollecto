@@ -4,6 +4,7 @@ class CollectionWithCategoryModel {
   final String name;
   final String normalizedName;
   final String categoryName;
+  final String? logoPath;
   final DateTime createdAt;
 
   const CollectionWithCategoryModel({
@@ -12,6 +13,7 @@ class CollectionWithCategoryModel {
     required this.name,
     required this.normalizedName,
     required this.categoryName,
+    required this.logoPath,
     required this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class CollectionWithCategoryModel {
       name: map['name'] as String,
       normalizedName: map['normalized_name'] as String,
       categoryName: map['category_name'] as String,
+      logoPath: map['logo_path'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }

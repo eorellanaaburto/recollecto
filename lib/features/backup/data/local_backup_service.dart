@@ -52,6 +52,9 @@ class LocalBackupService {
     final itemsRoot = Directory(
       p.join(documentsDir.path, 'recollecto', 'items'),
     );
+    final logosRoot = Directory(
+      p.join(documentsDir.path, 'recollecto', 'collection_logos'),
+    );
 
     final backupId = DateTime.now().millisecondsSinceEpoch.toString();
     final workDir = Directory(
@@ -64,12 +67,20 @@ class LocalBackupService {
     await workDir.create(recursive: true);
 
     final manifestFile = File(p.join(workDir.path, 'manifest.json'));
-    final imageFiles = <File>[];
+    final assetFiles = <File>[];
 
     if (await itemsRoot.exists()) {
       for (final entity in itemsRoot.listSync(recursive: true)) {
         if (entity is File) {
-          imageFiles.add(entity);
+          assetFiles.add(entity);
+        }
+      }
+    }
+
+    if (await logosRoot.exists()) {
+      for (final entity in logosRoot.listSync(recursive: true)) {
+        if (entity is File) {
+          assetFiles.add(entity);
         }
       }
     }
@@ -77,17 +88,17 @@ class LocalBackupService {
     await manifestFile.writeAsString(
       jsonEncode({
         'app': 'Recollecto',
-        'version': 1,
+        'version': 2,
         'createdAt': DateTime.now().toIso8601String(),
         'databaseName': 'recollecto.db',
-        'imageCount': imageFiles.length,
+        'assetCount': assetFiles.length,
       }),
     );
 
     final allFiles = <File>[
       dbFile,
       manifestFile,
-      ...imageFiles,
+      ...assetFiles,
     ];
 
     final archive = Archive();
@@ -100,9 +111,14 @@ class LocalBackupService {
         archivePath = 'database/recollecto.db';
       } else if (file.path == manifestFile.path) {
         archivePath = 'manifest.json';
-      } else {
+      } else if (p.isWithin(itemsRoot.path, file.path)) {
         final relative = p.relative(file.path, from: itemsRoot.path);
         archivePath = p.join('items', relative);
+      } else if (p.isWithin(logosRoot.path, file.path)) {
+        final relative = p.relative(file.path, from: logosRoot.path);
+        archivePath = p.join('collection_logos', relative);
+      } else {
+        continue;
       }
 
       final bytes = await file.readAsBytes();
@@ -365,6 +381,7 @@ class LocalBackupService {
     await extractedDb.copy(dbPath);
 
     final documentsDir = await getApplicationDocumentsDirectory();
+
     final currentItemsRoot = Directory(
       p.join(documentsDir.path, 'recollecto', 'items'),
     );
@@ -372,8 +389,19 @@ class LocalBackupService {
       p.join(extractRoot.path, 'items'),
     );
 
+    final currentLogosRoot = Directory(
+      p.join(documentsDir.path, 'recollecto', 'collection_logos'),
+    );
+    final extractedLogosRoot = Directory(
+      p.join(extractRoot.path, 'collection_logos'),
+    );
+
     if (await currentItemsRoot.exists()) {
       await currentItemsRoot.delete(recursive: true);
+    }
+
+    if (await currentLogosRoot.exists()) {
+      await currentLogosRoot.delete(recursive: true);
     }
 
     if (await extractedItemsRoot.exists()) {
@@ -382,6 +410,16 @@ class LocalBackupService {
         destination: currentItemsRoot,
         onProgress: onProgress,
         start: 0.70,
+        end: 0.90,
+      );
+    }
+
+    if (await extractedLogosRoot.exists()) {
+      await _copyDirectoryWithProgress(
+        source: extractedLogosRoot,
+        destination: currentLogosRoot,
+        onProgress: onProgress,
+        start: 0.90,
         end: 0.98,
       );
     }
@@ -425,7 +463,7 @@ class LocalBackupService {
       await sourceFile.copy(destFile.path);
 
       final progress = start + ((i + 1) / files.length) * (end - start);
-      onProgress(progress, 'Restaurando imágenes');
+      onProgress(progress, 'Restaurando archivos');
     }
   }
 }

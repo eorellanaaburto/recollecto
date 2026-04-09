@@ -20,7 +20,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -31,9 +31,13 @@ class AppDatabase {
         if (oldVersion < 2) {
           await _ensureImageHashSchema(db);
         }
+        if (oldVersion < 3) {
+          await _ensureCollectionLogoSchema(db);
+        }
       },
       onOpen: (db) async {
         await _ensureImageHashSchema(db);
+        await _ensureCollectionLogoSchema(db);
       },
     );
   }
@@ -54,6 +58,7 @@ class AppDatabase {
         category_id TEXT NOT NULL,
         name TEXT NOT NULL,
         normalized_name TEXT NOT NULL,
+        logo_path TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
       )
@@ -137,6 +142,17 @@ class AppDatabase {
       CREATE INDEX IF NOT EXISTS idx_item_photos_image_hash
       ON item_photos(image_hash)
     ''');
+  }
+
+  Future<void> _ensureCollectionLogoSchema(DatabaseExecutor db) async {
+    final columns = await db.rawQuery("PRAGMA table_info(collections)");
+    final hasLogoPath = columns.any((column) => column['name'] == 'logo_path');
+
+    if (!hasLogoPath) {
+      await db.execute(
+        'ALTER TABLE collections ADD COLUMN logo_path TEXT',
+      );
+    }
   }
 
   Future<void> close() async {

@@ -3,15 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/local_text.dart';
+import '../../collections/data/collection_logo_storage_service.dart';
+import '../../collections/data/collection_repository.dart';
+import '../../collections/domain/models/collection_with_category_model.dart';
 import '../../items/data/item_repository.dart';
-import '../../items/data/photo_storage_service.dart';
 import '../../items/domain/models/item_gallery_model.dart';
-import '../../items/presentation/edit_item_page.dart';
-import '../../items/presentation/item_detail_page.dart';
+import 'collection_items_page.dart';
 
-enum _GalleryItemAction {
-  edit,
-  delete,
+enum _CollectionCardAction {
+  addLogo,
+  changeLogo,
+  removeLogo,
 }
 
 class GalleryPage extends StatefulWidget {
@@ -23,18 +25,22 @@ class GalleryPage extends StatefulWidget {
 
 class _GalleryPageState extends State<GalleryPage> {
   final ItemRepository _itemRepository = ItemRepository();
-  final PhotoStorageService _photoStorageService = PhotoStorageService();
+  final CollectionRepository _collectionRepository = CollectionRepository();
+  final CollectionLogoStorageService _logoStorageService =
+      CollectionLogoStorageService();
 
   final List<ItemGalleryModel> _items = [];
+  final List<CollectionWithCategoryModel> _collections = [];
+
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadItems();
+    _loadData();
   }
 
-  Future<void> _loadItems() async {
+  Future<void> _loadData() async {
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -42,20 +48,8 @@ class _GalleryPageState extends State<GalleryPage> {
     }
 
     try {
-      await _itemRepository.debugPrintDatabaseState();
-
       final items = await _itemRepository.getAllItemsForGallery();
-
-      debugPrint('Gallery items loaded: ${items.length}');
-      for (final item in items) {
-        debugPrint(
-          'ITEM => ${item.title} | '
-          'cat=${item.categoryName} | '
-          'col=${item.collectionName} | '
-          'photos=${item.photoCount} | '
-          'image=${item.primaryPhotoPath}',
-        );
-      }
+      final collections = await _collectionRepository.getAllCollections();
 
       if (!mounted) return;
 
@@ -63,10 +57,15 @@ class _GalleryPageState extends State<GalleryPage> {
         _items
           ..clear()
           ..addAll(items);
+
+        _collections
+          ..clear()
+          ..addAll(collections);
+
         _isLoading = false;
       });
     } catch (e, st) {
-      debugPrint('Error loading gallery: $e');
+      debugPrint('Error loading gallery collections: $e');
       debugPrint('$st');
 
       if (!mounted) return;
@@ -89,139 +88,172 @@ class _GalleryPageState extends State<GalleryPage> {
     }
   }
 
-  Map<String, Map<String, List<ItemGalleryModel>>> _groupItems() {
-    final grouped = <String, Map<String, List<ItemGalleryModel>>>{};
+  Map<String, List<_CollectionGroup>> _groupCollectionsByCategory() {
+    final itemsByCollectionId = <String, List<ItemGalleryModel>>{};
 
     for (final item in _items) {
-      grouped.putIfAbsent(item.categoryName, () => {});
-      grouped[item.categoryName]!.putIfAbsent(item.collectionName, () => []);
-      grouped[item.categoryName]![item.collectionName]!.add(item);
+      itemsByCollectionId.putIfAbsent(item.collectionId, () => []);
+      itemsByCollectionId[item.collectionId]!.add(item);
     }
 
-    return grouped;
+    final grouped = <String, List<_CollectionGroup>>{};
+
+    for (final collection in _collections) {
+      final collectionItems = List<ItemGalleryModel>.from(
+        itemsByCollectionId[collection.id] ?? const [],
+      )..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+
+      final visualPath = _resolveVisualPath(
+        logoPath: collection.logoPath,
+        items: collectionItems,
+      );
+
+      final entry = _CollectionGroup(
+        categoryId: collection.categoryId,
+        categoryName: collection.categoryName,
+        collectionId: collection.id,
+        collectionName: collection.name,
+        logoPath: collection.logoPath,
+        visualPath: visualPath,
+        items: collectionItems,
+      );
+
+      grouped.putIfAbsent(collection.categoryName, () => []);
+      grouped[collection.categoryName]!.add(entry);
+    }
+
+    for (final list in grouped.values) {
+      list.sort((a, b) {
+        return a.collectionName.toLowerCase().compareTo(
+              b.collectionName.toLowerCase(),
+            );
+      });
+    }
+
+    return Map.fromEntries(
+      grouped.entries.toList()
+        ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase())),
+    );
   }
 
-  int _countItemsInCategory(Map<String, List<ItemGalleryModel>> collections) {
+  String? _resolveVisualPath({
+    required String? logoPath,
+    required List<ItemGalleryModel> items,
+  }) {
+    if (logoPath != null &&
+        logoPath.isNotEmpty &&
+        File(logoPath).existsSync()) {
+      return logoPath;
+    }
+
+    for (final item in items) {
+      final path = item.primaryPhotoPath;
+      if (path != null && path.isNotEmpty && File(path).existsSync()) {
+        return path;
+      }
+    }
+
+    return null;
+  }
+
+  int _countItemsInCategory(List<_CollectionGroup> collections) {
     int total = 0;
-    for (final items in collections.values) {
-      total += items.length;
+    for (final collection in collections) {
+      total += collection.items.length;
     }
     return total;
   }
 
-  Future<void> _openItemDetail(ItemGalleryModel item) async {
+  Future<void> _openCollection(_CollectionGroup collection) async {
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => ItemDetailPage(itemId: item.itemId),
+        builder: (_) => CollectionItemsPage(
+          categoryName: collection.categoryName,
+          collectionName: collection.collectionName,
+          items: collection.items,
+          coverPhotoPath: collection.visualPath,
+        ),
       ),
     );
 
     if (changed == true) {
-      await _loadItems();
+      await _loadData();
     }
   }
 
-  Future<void> _openEdit(ItemGalleryModel item) async {
-    final detail = await _itemRepository.getItemDetail(item.itemId);
-    if (detail == null || !mounted) return;
-
-    final changed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditItemPage(item: detail),
-      ),
+  Future<void> _setLogo(_CollectionGroup collection) async {
+    final savedPath = await _logoStorageService.pickAndSaveLogo(
+      collectionId: collection.collectionId,
     );
 
-    if (changed == true) {
-      await _loadItems();
-    }
-  }
+    if (savedPath == null) return;
 
-  Future<void> _deleteItem(ItemGalleryModel item) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text(
-            tr(context, es: 'Eliminar ítem', en: 'Delete item'),
-          ),
-          content: Text(
-            tr(
-              context,
-              es: '¿Seguro que quieres eliminar "${item.title}" y todas sus fotos?',
-              en: 'Are you sure you want to delete "${item.title}" and all its photos?',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(tr(context, es: 'Cancelar', en: 'Cancel')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(tr(context, es: 'Eliminar', en: 'Delete')),
-            ),
-          ],
-        );
-      },
+    await _collectionRepository.updateCollectionLogo(
+      collectionId: collection.collectionId,
+      logoPath: savedPath,
     );
-
-    if (confirmed != true) return;
-
-    await _itemRepository.deleteItem(item.itemId);
-    await _photoStorageService.deleteItemDirectory(item.itemId);
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(tr(context, es: 'Ítem eliminado.', en: 'Item deleted.')),
+        content: Text(
+          tr(
+            context,
+            es: 'Logo guardado correctamente.',
+            en: 'Logo saved successfully.',
+          ),
+        ),
       ),
     );
 
-    await _loadItems();
+    await _loadData();
   }
 
-  Future<void> _handleItemAction(
-    _GalleryItemAction action,
-    ItemGalleryModel item,
+  Future<void> _removeLogo(_CollectionGroup collection) async {
+    await _logoStorageService.deleteLogoByPath(collection.logoPath);
+
+    await _collectionRepository.updateCollectionLogo(
+      collectionId: collection.collectionId,
+      logoPath: null,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tr(
+            context,
+            es: 'Logo eliminado.',
+            en: 'Logo removed.',
+          ),
+        ),
+      ),
+    );
+
+    await _loadData();
+  }
+
+  Future<void> _handleCollectionAction(
+    _CollectionCardAction action,
+    _CollectionGroup collection,
   ) async {
     switch (action) {
-      case _GalleryItemAction.edit:
-        await _openEdit(item);
+      case _CollectionCardAction.addLogo:
+      case _CollectionCardAction.changeLogo:
+        await _setLogo(collection);
         break;
-      case _GalleryItemAction.delete:
-        await _deleteItem(item);
+      case _CollectionCardAction.removeLogo:
+        await _removeLogo(collection);
         break;
     }
   }
 
-  void _openPhotoModal(ItemGalleryModel item) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ItemPhotoModal(
-        item: item,
-        onOpenDetail: () async {
-          Navigator.pop(context);
-          await _openItemDetail(item);
-        },
-        onEdit: () async {
-          Navigator.pop(context);
-          await _openEdit(item);
-        },
-        onDelete: () async {
-          Navigator.pop(context);
-          await _deleteItem(item);
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final grouped = _groupItems();
+    final grouped = _groupCollectionsByCategory();
 
     return Scaffold(
       appBar: AppBar(
@@ -232,8 +264,8 @@ class _GalleryPageState extends State<GalleryPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadItems,
-              child: _items.isEmpty
+              onRefresh: _loadData,
+              child: _collections.isEmpty
                   ? ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
@@ -243,8 +275,8 @@ class _GalleryPageState extends State<GalleryPage> {
                             child: Text(
                               tr(
                                 context,
-                                es: 'Todavía no tienes ítems guardados para mostrar.',
-                                en: 'You do not have any saved items to show yet.',
+                                es: 'Todavía no tienes colecciones guardadas.',
+                                en: 'You do not have any collections yet.',
                               ),
                             ),
                           ),
@@ -261,6 +293,7 @@ class _GalleryPageState extends State<GalleryPage> {
                         return Card(
                           margin: const EdgeInsets.only(bottom: 14),
                           child: ExpansionTile(
+                            initiallyExpanded: true,
                             title: Text(
                               categoryName,
                               style: const TextStyle(
@@ -268,75 +301,56 @@ class _GalleryPageState extends State<GalleryPage> {
                               ),
                             ),
                             subtitle: Text(
-                              '${tr(context, es: '$totalItems ítems', en: '$totalItems items')} • '
-                              '${tr(context, es: '${collections.length} colecciones', en: '${collections.length} collections')}',
+                              '${tr(context, es: '${collections.length} colecciones', en: '${collections.length} collections')} • '
+                              '${tr(context, es: '$totalItems ítems', en: '$totalItems items')}',
                             ),
-                            children:
-                                collections.entries.map((collectionEntry) {
-                              final collectionName = collectionEntry.key;
-                              final items = collectionEntry.value;
-
-                              return Padding(
+                            children: [
+                              Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                                child: Card(
-                                  margin: EdgeInsets.zero,
-                                  child: ExpansionTile(
-                                    title: Text(collectionName),
-                                    subtitle: Text(
-                                      tr(
-                                        context,
-                                        es: '${items.length} ítems',
-                                        en: '${items.length} items',
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final width = constraints.maxWidth;
+
+                                    int crossAxisCount = 2;
+                                    if (width >= 1000) {
+                                      crossAxisCount = 4;
+                                    } else if (width >= 700) {
+                                      crossAxisCount = 3;
+                                    }
+
+                                    return GridView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: collections.length,
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 12,
+                                        childAspectRatio: 0.86,
                                       ),
-                                    ),
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final width = constraints.maxWidth;
+                                      itemBuilder: (context, index) {
+                                        final collection = collections[index];
 
-                                            int crossAxisCount = 2;
-                                            if (width >= 900) {
-                                              crossAxisCount = 4;
-                                            } else if (width >= 600) {
-                                              crossAxisCount = 3;
-                                            }
-
-                                            return GridView.builder(
-                                              shrinkWrap: true,
-                                              physics:
-                                                  const NeverScrollableScrollPhysics(),
-                                              itemCount: items.length,
-                                              gridDelegate:
-                                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                                crossAxisCount: crossAxisCount,
-                                                crossAxisSpacing: 12,
-                                                mainAxisSpacing: 12,
-                                                childAspectRatio: 0.78,
-                                              ),
-                                              itemBuilder: (context, index) {
-                                                final item = items[index];
-
-                                                return _GalleryItemCard(
-                                                  item: item,
-                                                  onTap: () =>
-                                                      _openPhotoModal(item),
-                                                  onSelectedAction: (action) =>
-                                                      _handleItemAction(
-                                                          action, item),
-                                                );
-                                              },
+                                        return _CollectionCard(
+                                          collection: collection,
+                                          onTap: () =>
+                                              _openCollection(collection),
+                                          onSelectedAction: (action) {
+                                            _handleCollectionAction(
+                                              action,
+                                              collection,
                                             );
                                           },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                        );
+                                      },
+                                    );
+                                  },
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),
@@ -346,27 +360,52 @@ class _GalleryPageState extends State<GalleryPage> {
   }
 }
 
-class _GalleryItemCard extends StatelessWidget {
-  final ItemGalleryModel item;
-  final VoidCallback onTap;
-  final ValueChanged<_GalleryItemAction> onSelectedAction;
+class _CollectionGroup {
+  final String categoryId;
+  final String categoryName;
+  final String collectionId;
+  final String collectionName;
+  final String? logoPath;
+  final String? visualPath;
+  final List<ItemGalleryModel> items;
 
-  const _GalleryItemCard({
-    required this.item,
+  const _CollectionGroup({
+    required this.categoryId,
+    required this.categoryName,
+    required this.collectionId,
+    required this.collectionName,
+    required this.logoPath,
+    required this.visualPath,
+    required this.items,
+  });
+}
+
+class _CollectionCard extends StatelessWidget {
+  final _CollectionGroup collection;
+  final VoidCallback onTap;
+  final ValueChanged<_CollectionCardAction> onSelectedAction;
+
+  const _CollectionCard({
+    required this.collection,
     required this.onTap,
     required this.onSelectedAction,
   });
 
   @override
   Widget build(BuildContext context) {
-    final imagePath = item.primaryPhotoPath;
+    final imagePath = collection.visualPath;
     final hasImage = imagePath != null &&
         imagePath.isNotEmpty &&
         File(imagePath).existsSync();
 
+    final hasRealLogo = collection.logoPath != null &&
+        collection.logoPath!.isNotEmpty &&
+        File(collection.logoPath!).existsSync();
+
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
+      elevation: 1.5,
       child: InkWell(
         onTap: onTap,
         child: Column(
@@ -383,9 +422,11 @@ class _GalleryItemCard extends StatelessWidget {
                           )
                         : Container(
                             color: Colors.grey.shade300,
-                            child: const Icon(
-                              Icons.image_not_supported_outlined,
-                              size: 38,
+                            child: const Center(
+                              child: Icon(
+                                Icons.collections_bookmark_outlined,
+                                size: 42,
+                              ),
                             ),
                           ),
                   ),
@@ -395,218 +436,130 @@ class _GalleryItemCard extends StatelessWidget {
                     child: Material(
                       color: Colors.black45,
                       borderRadius: BorderRadius.circular(20),
-                      child: PopupMenuButton<_GalleryItemAction>(
-                        tooltip: tr(context, es: 'Acciones', en: 'Actions'),
+                      child: PopupMenuButton<_CollectionCardAction>(
+                        tooltip: tr(context, es: 'Logo', en: 'Logo'),
                         icon: const Icon(
                           Icons.more_vert,
                           color: Colors.white,
                         ),
                         onSelected: onSelectedAction,
-                        itemBuilder: (context) => [
+                        itemBuilder: (_) => [
                           PopupMenuItem(
-                            value: _GalleryItemAction.edit,
-                            child: Text(tr(context, es: 'Editar', en: 'Edit')),
+                            value: hasRealLogo
+                                ? _CollectionCardAction.changeLogo
+                                : _CollectionCardAction.addLogo,
+                            child: Text(
+                              hasRealLogo
+                                  ? tr(context,
+                                      es: 'Cambiar logo', en: 'Change logo')
+                                  : tr(context,
+                                      es: 'Agregar logo', en: 'Add logo'),
+                            ),
                           ),
-                          PopupMenuItem(
-                            value: _GalleryItemAction.delete,
-                            child:
-                                Text(tr(context, es: 'Eliminar', en: 'Delete')),
-                          ),
+                          if (hasRealLogo)
+                            PopupMenuItem(
+                              value: _CollectionCardAction.removeLogo,
+                              child: Text(
+                                tr(context,
+                                    es: 'Quitar logo', en: 'Remove logo'),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                   ),
+                  Positioned(
+                    left: 10,
+                    right: 10,
+                    bottom: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        collection.collectionName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (hasRealLogo)
+                    Positioned(
+                      left: 10,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.60),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          tr(context, es: 'Logo', en: 'Logo'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.title,
-                    maxLines: 2,
+                    collection.categoryName,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    tr(
-                      context,
-                      es: '${item.photoCount} foto(s)',
-                      en: '${item.photoCount} photo(s)',
-                    ),
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade700,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ItemPhotoModal extends StatelessWidget {
-  final ItemGalleryModel item;
-  final Future<void> Function() onOpenDetail;
-  final Future<void> Function() onEdit;
-  final Future<void> Function() onDelete;
-
-  const _ItemPhotoModal({
-    required this.item,
-    required this.onOpenDetail,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final imagePath = item.primaryPhotoPath;
-    final description = item.description;
-
-    final hasImage = imagePath != null &&
-        imagePath.isNotEmpty &&
-        File(imagePath).existsSync();
-
-    final hasDescription = description != null && description.trim().isNotEmpty;
-
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.88,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: hasImage
-                  ? InteractiveViewer(
-                      minScale: 0.8,
-                      maxScale: 4,
-                      child: Image.file(
-                        File(imagePath!),
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                      ),
-                    )
-                  : Container(
-                      width: double.infinity,
-                      color: Colors.grey.shade300,
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported_outlined,
-                          size: 60,
-                        ),
-                      ),
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 6),
+                  Row(
                     children: [
-                      Text(
-                        tr(
-                          context,
-                          es: 'Categoría: ${item.categoryName}',
-                          en: 'Category: ${item.categoryName}',
-                        ),
+                      Icon(
+                        Icons.inventory_2_outlined,
+                        size: 16,
+                        color: Colors.grey.shade700,
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        tr(
-                          context,
-                          es: 'Colección: ${item.collectionName}',
-                          en: 'Collection: ${item.collectionName}',
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        tr(
-                          context,
-                          es: 'Fotos: ${item.photoCount}',
-                          en: 'Photos: ${item.photoCount}',
-                        ),
-                      ),
-                      if (hasDescription) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          tr(context, es: 'Descripción', en: 'Description'),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(description!),
-                      ],
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: onEdit,
-                              icon: const Icon(Icons.edit_outlined),
-                              label:
-                                  Text(tr(context, es: 'Editar', en: 'Edit')),
-                            ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          tr(
+                            context,
+                            es: '${collection.items.length} ítems',
+                            en: '${collection.items.length} items',
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: onDelete,
-                              icon: const Icon(Icons.delete_outline),
-                              label: Text(
-                                tr(context, es: 'Eliminar', en: 'Delete'),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: onOpenDetail,
-                          icon: const Icon(Icons.open_in_new),
-                          label: Text(
-                            tr(
-                              context,
-                              es: 'Ver detalle completo',
-                              en: 'View full details',
-                            ),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
+                      const Icon(Icons.chevron_right),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
           ],

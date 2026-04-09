@@ -16,6 +16,7 @@ class CollectionRepository {
         c.category_id,
         c.name,
         c.normalized_name,
+        c.logo_path,
         c.created_at,
         cat.name AS category_name
       FROM collections c
@@ -54,6 +55,36 @@ class CollectionRepository {
     );
   }
 
+  Future<void> updateCollectionLogo({
+    required String collectionId,
+    required String? logoPath,
+  }) async {
+    final db = await _appDatabase.database;
+
+    await db.update(
+      'collections',
+      {
+        'logo_path': logoPath,
+      },
+      where: 'id = ?',
+      whereArgs: [collectionId],
+    );
+  }
+
+  Future<CollectionModel?> getCollectionById(String id) async {
+    final db = await _appDatabase.database;
+
+    final result = await db.query(
+      'collections',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+    return CollectionModel.fromMap(result.first);
+  }
+
   Future<void> deleteCollection(String id) async {
     final db = await _appDatabase.database;
 
@@ -65,7 +96,8 @@ class CollectionRepository {
   }
 
   Future<List<CollectionModel>> getCollectionsByCategory(
-      String categoryId) async {
+    String categoryId,
+  ) async {
     final db = await _appDatabase.database;
 
     final result = await db.query(

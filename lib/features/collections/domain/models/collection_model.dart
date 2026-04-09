@@ -3,6 +3,7 @@ class CollectionModel {
   final String categoryId;
   final String name;
   final String normalizedName;
+  final String? logoPath;
   final DateTime createdAt;
 
   const CollectionModel({
@@ -10,6 +11,7 @@ class CollectionModel {
     required this.categoryId,
     required this.name,
     required this.normalizedName,
+    required this.logoPath,
     required this.createdAt,
   });
 
@@ -19,6 +21,7 @@ class CollectionModel {
       'category_id': categoryId,
       'name': name,
       'normalized_name': normalizedName,
+      'logo_path': logoPath,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -29,6 +32,7 @@ class CollectionModel {
       categoryId: map['category_id'] as String,
       name: map['name'] as String,
       normalizedName: map['normalized_name'] as String,
+      logoPath: map['logo_path'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
