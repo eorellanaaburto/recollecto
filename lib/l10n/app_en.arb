@@ -1,0 +1,84 @@
+{
+  "appTitle": "Recollecto",
+  "splashSubtitle": "Organize and explore your collection",
+
+  "home": "Home",
+  "explore": "Explore",
+  "add": "Add",
+  "backup": "Backup",
+  "settings": "Settings",
+
+  "categories": "Categories",
+  "categoriesSubtitle": "Create and manage your categories",
+  "collections": "Collections",
+  "collectionsSubtitle": "Organize your items into collections",
+
+  "addItem": "Add item",
+  "addItemSubtitle": "Register a new item in your collection",
+
+  "exploreCollection": "Explore collection",
+  "exploreCollectionSubtitle": "Browse your full catalog",
+
+  "backupSubtitle": "Manage local and external backups",
+  "settingsSubtitle": "Customize the application",
+
+  "welcomeTitle": "Welcome",
+  "welcomeSubtitle": "Manage your collection easily",
+
+  "language": "Language",
+  "languageSystem": "Use system language",
+  "languageSpanish": "Spanish",
+  "languageEnglish": "English",
+
+  "viewLogs": "View logs",
+  "viewLogsSubtitle": "Check app events and errors",
+
+  "themeLight": "Light theme",
+  "themeLightSubtitle": "Use a light appearance",
+  "themeDark": "Dark theme",
+  "themeDarkSubtitle": "Use a dark appearance",
+
+  "categoriesAdminSubtitle": "Create and manage your categories",
+  "categoryNameLabel": "Category name",
+  "categoryNameHint": "Ex: Figures, Books, Video Games",
+  "savingCategory": "Saving...",
+  "createCategoryButton": "Create category",
+  "noCategoriesYet": "You don't have any categories yet.",
+  "mustEnterCategoryName": "You must enter a category name.",
+  "categoryAlreadyExists": "That category already exists.",
+  "categoryCreatedSuccessfully": "Category created successfully.",
+  "deleteCategoryTitle": "Delete category",
+  "deleteCategoryConfirmation": "Are you sure you want to delete \"{name}\"?",
+  "@deleteCategoryConfirmation": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "categoryDeleted": "Category deleted.",
+  "createdLabel": "Created: {date}",
+  "@createdLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "errorLoadingCategories": "Error loading categories: {error}",
+  "@errorLoadingCategories": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "errorCreatingCategory": "Error creating category: {error}",
+  "@errorCreatingCategory": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "errorDeletingCategory": "Error deleting category: {error}",
+  "@errorDeletingCategory": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

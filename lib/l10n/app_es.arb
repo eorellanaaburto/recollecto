@@ -1,0 +1,84 @@
+{
+  "appTitle": "Recollecto",
+  "splashSubtitle": "Organiza y explora tu colección",
+
+  "home": "Inicio",
+  "explore": "Explorar",
+  "add": "Agregar",
+  "backup": "Respaldo",
+  "settings": "Ajustes",
+
+  "categories": "Categorías",
+  "categoriesSubtitle": "Crea y administra tus categorías",
+  "collections": "Colecciones",
+  "collectionsSubtitle": "Organiza tus ítems en colecciones",
+
+  "addItem": "Agregar ítem",
+  "addItemSubtitle": "Registra un nuevo elemento en tu colección",
+
+  "exploreCollection": "Explorar colección",
+  "exploreCollectionSubtitle": "Visualiza todo tu catálogo",
+
+  "backupSubtitle": "Gestiona respaldos locales y externos",
+  "settingsSubtitle": "Personaliza la aplicación",
+
+  "welcomeTitle": "Bienvenido",
+  "welcomeSubtitle": "Gestiona tu colección fácilmente",
+
+  "language": "Idioma",
+  "languageSystem": "Usar idioma del sistema",
+  "languageSpanish": "Español",
+  "languageEnglish": "Inglés",
+
+  "viewLogs": "Ver registros",
+  "viewLogsSubtitle": "Consulta eventos y errores de la app",
+
+  "themeLight": "Tema claro",
+  "themeLightSubtitle": "Usa una apariencia clara",
+  "themeDark": "Tema oscuro",
+  "themeDarkSubtitle": "Usa una apariencia oscura",
+
+  "categoriesAdminSubtitle": "Crea y administra tus categorías",
+  "categoryNameLabel": "Nombre de la categoría",
+  "categoryNameHint": "Ej: Figuras, Libros, Videojuegos",
+  "savingCategory": "Guardando...",
+  "createCategoryButton": "Crear categoría",
+  "noCategoriesYet": "Todavía no tienes categorías creadas.",
+  "mustEnterCategoryName": "Debes escribir un nombre para la categoría.",
+  "categoryAlreadyExists": "Esa categoría ya existe.",
+  "categoryCreatedSuccessfully": "Categoría creada correctamente.",
+  "deleteCategoryTitle": "Eliminar categoría",
+  "deleteCategoryConfirmation": "¿Seguro que quieres eliminar \"{name}\"?",
+  "@deleteCategoryConfirmation": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "cancel": "Cancelar",
+  "delete": "Eliminar",
+  "categoryDeleted": "Categoría eliminada.",
+  "createdLabel": "Creada: {date}",
+  "@createdLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "errorLoadingCategories": "Error cargando categorías: {error}",
+  "@errorLoadingCategories": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "errorCreatingCategory": "Error al crear la categoría: {error}",
+  "@errorCreatingCategory": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "errorDeletingCategory": "Error eliminando categoría: {error}",
+  "@errorDeletingCategory": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}
