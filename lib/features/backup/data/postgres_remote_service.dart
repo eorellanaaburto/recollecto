@@ -40,11 +40,11 @@ class SqlRestoreResult {
 }
 
 class PostgresRemoteService {
-  static const String _host = '100.79.205.20';
+  static const String _host = 'IP_SERVIDOR_LOCAL_O_WEB';
   static const int _port = 5432;
   static const String _database = 'recollecto_db';
   static const String _username = 'recollecto_user';
-  static const String _password = 'ima3298a';
+  static const String _password = 'TU_PASS_DE_SERVIDOR';
 
   final AppDatabase _appDatabase = AppDatabase.instance;
 
